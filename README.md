@@ -24,15 +24,16 @@ There is no installation target yet, just copy the files where you can execute i
 Here are the following programs and script:
 
 
-disp\_vibr.bash: create a xsf file with the animation of each vibration modes from a VASP calculation.
-get\_lvl.bash: display some interesting level information for each k-point of a VASP calculation.
+`disp_vibr.bash`: create a xsf file with the animation of each vibration modes from a VASP calculation.
 
-uspex\_chem: read USPEX Individuals file and plot a convex hull, using external reference in a small file, `chem.in` if available.
+`get_lvl.bash`: display some interesting level information for each k-point of a VASP calculation.
+
+`uspex_chem`: read USPEX Individuals file and plot a convex hull, using external reference in a small file, `chem.in` if available.
 
 
 ## Develop
 
-A debug` target is available for developing purpose.
+A `debug` target is available for developing purpose.
 Using `make debug` will automatically turn the development mode.
 A GLIB target is also available (with its debug target) for portability.
 Use `make glib` for the former and `make dglib` for the latter.
