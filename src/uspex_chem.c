@@ -39,10 +39,14 @@ typedef struct {
 	DOUBLE e_form;
 } individual;
 typedef struct {
+	CHAR symbol[3];
+} atom;
+typedef struct {
+	atom   *elements;
 	individual *refs;
 	individual *inds;
-	DOUBLE  e_f_min;
-	DOUBLE  e_f_max;
+	DOUBLE   e_f_min;
+	DOUBLE   e_f_max;
 } handle;
 /*globals*/
 UINT n_individuals;
@@ -53,8 +57,10 @@ BOOL pictave;
 /*specific*/
 #define NIND (n_individuals)
 #define NREF (n_species)
+#define NELM (n_species)
 #define IND ih.inds
 #define REF ih.refs
+#define ELM ih.elements
 
 BOOL read_ind_param(){
 	FILE *vf;
@@ -89,9 +95,51 @@ BOOL read_ind_param(){
 	if(NREF<1) return FALSE;
 	ALLOC(REF,NREF,individual);
 	ALLOC(IND,NIND,individual);
+	ALLOC(ELM,NELM,atom);
 	ih.e_f_min = -1.0;
 	ih.e_f_max =  0.0;
 	FREE(line);
+	return TRUE;
+}
+
+BOOL read_param_sym(){
+	/*try to peek symbols from Parameters.txt*/
+	FILE *vf;
+	size_t len = 0;
+	UINT idx=0;
+	CHAR  *ptr;
+	CHAR *line = NULL;
+	vf = fopen("Parameters.txt","rt");
+	if (!vf) return FALSE;/*FAIL*/
+	READLINE(vf,line);
+	while(!feof(vf)){
+		if(STRFIND("atomType",line) != NULL){
+			READLINE(vf,line);/*READ next line*/
+#ifdef _DEB_
+fprintf(stdout,"ATOMS:");
+#endif
+			ptr=&(line[0]);
+			SKIP_BLANK(ptr);
+			while((*ptr!='\0')&&(idx<NREF)){
+				ELM[idx].symbol[0]=*ptr;
+				ELM[idx].symbol[1]=*(ptr+1);
+				ELM[idx].symbol[2]='\0';
+#ifdef _DEB_
+fprintf(stdout," %s",ELM[idx].symbol);
+#endif
+				idx++;
+				ptr=ptr+2;
+				SKIP_BLANK(ptr);
+			}
+#ifdef _DEB_
+fprintf(stdout,"\n");
+#endif
+			break;
+		}
+		READLINE(vf,line);
+	}
+	FREE(line);
+	fclose(vf);
 	return TRUE;
 }
 
@@ -238,7 +286,7 @@ BOOL read_chem(){
 		REF[species].energy=energy_ref;
 		READLINE(vf,line);
 	}
-	if(pictave) n_species--;
+	if(pictave) n_species--;/*we should free last REF, ELM element as well*/
 	FREE(line);
 	fclose(vf);
 	return TRUE;
@@ -248,7 +296,9 @@ BOOL create_chem(){
 	BOOL is_ref;
 	UINT idx,jdx,kdx;
 	DOUBLE e_ref=0.0;
+/*we are looking through the Individuals for references*/
 	for(jdx=0;jdx<NREF;jdx++){
+		if(REF[jdx].natoms!=0) continue;/*ONLY if we don't have references*/
 		ALLOC(REF[jdx].atoms,NREF,UINT);
 		e_ref=1.0/0.0;/*+inf <- SHOULD USE DBL_MAX ???*/
 		for(idx=1;idx<NIND;idx++){
@@ -279,8 +329,7 @@ fprintf(stdout,"IND[%i] accepted for REF[%i] e_ref=%lf\n",idx,jdx,e_ref);
 
 void calc_form(){
 	DOUBLE ratio,e_f;
-	UINT idx,jdx,acc;
-	individual  tamp;/*for _SWAP_*/
+	UINT    idx, jdx;
 /*ASSERT: REF set must be complete!*/
 	for(idx=1;idx<NIND;idx++){
 		ratio=0.;e_f=0.;
@@ -300,30 +349,6 @@ void calc_form(){
 		if(ih.e_f_min > IND[idx].e_form) ih.e_f_min=IND[idx].e_form;
 		if(ih.e_f_max < IND[idx].e_form) ih.e_f_max=IND[idx].e_form;
 	}
-	/*order everything based on e_form <- necessary?*/
-#ifdef _SWAP_
-	for(idx=1;idx<NIND;idx++){
-		acc=idx;
-		for(jdx=acc+1;jdx<NIND;jdx++){
-			if(IND[jdx].e_form<IND[acc].e_form) acc=jdx;
-		}
-		if(acc!=idx){
-			//swap idx <-> acc
-			tamp.natoms = IND[idx].natoms;
-			tamp.atoms  = IND[idx].atoms;
-			tamp.energy = IND[idx].energy;
-			tamp.e_form = IND[idx].e_form;
-			IND[idx].natoms = IND[acc].natoms;
-			IND[idx].atoms  = IND[acc].atoms;
-			IND[idx].energy = IND[acc].energy;
-			IND[idx].e_form = IND[acc].e_form;
-			IND[acc].natoms = tamp.natoms;
-			IND[acc].atoms  = tamp.atoms;
-			IND[acc].energy = tamp.energy;
-			IND[acc].e_form = tamp.e_form;
-		}
-	}
-#endif
 }
 
 BOOL prep_hull(UINT species){
@@ -463,8 +488,13 @@ BOOL prep_hull(UINT species){
 	fprintf(vf,"set output \"chem_hull_%i.eps\"\n",species+1);
 	fprintf(vf,"set style line 1 lt -1 lw 2 pt 1 linecolor rgb \"black\"\n");
 	fprintf(vf,"set key bottom center outside horizontal\n");
-	fprintf(vf,"set title \"VARIABLE COMPOSITION species %i\" font \"DejaVuSans-Bold,24\"\n",species+1);
-	fprintf(vf,"set xlabel \"atomic ratio [%i] (%%)\" font \"DejaVuSans-Bold,16\"\n",species+1);
+if(ELM[species].symbol[0]!='\0'){
+	fprintf(vf,"set title \"VARIABLE COMPOSITION species: %s\" font \"DejaVuSans-Bold,24\"\n",ELM[species].symbol);
+	fprintf(vf,"set xlabel \"atomic ratio [%s] (%%)\" font \"DejaVuSans-Bold,16\"\n",ELM[species].symbol);
+}else{
+	fprintf(vf,"set title \"VARIABLE COMPOSITION species: #%i\" font \"DejaVuSans-Bold,24\"\n",species+1);
+	fprintf(vf,"set xlabel \"atomic ratio [#%i] (%%)\" font \"DejaVuSans-Bold,16\"\n",species+1);
+}
 	fprintf(vf,"set ylabel \"Formation energy (eV)\" font \"DejaVuSans-Bold,16\"\n");
 	fprintf(vf,"set yrange [ymin:ymax]\n");
 	fprintf(vf,"set xrange [xmin:xmax]\n");
@@ -496,33 +526,33 @@ void free_all(){
 }
 
 int main(void){
-	UINT idx,jdx;
-	BOOL chem;
+	UINT idx;
 	if(!read_ind_param()){
 		fprintf(stderr,"ERROR reading Individuals!\n");
 		return -1;
 	}
-	chem=read_chem();
+	read_param_sym();
+	read_chem();
 	if(!read_individuals()){
 		fprintf(stderr,"ERROR reading Individuals!\n");
 		return -1;
 	}
-	if(chem==FALSE) {
-//		pictave=TRUE;NREF--;
-		if(!create_chem()){
-			fprintf(stderr,"ERROR creating chem.in!\n");
-			return -1;
-		}
+	if(!create_chem()){/*NEW: create anyway (will fill the blank, if any)*/
+		fprintf(stderr,"ERROR creating chem.in!\n");
+		return -1;
 	}
 	calc_form();
-	for(idx=1;idx<NIND;idx++){
-		fprintf(stdout,"IND[%i] E=%lf\n",idx,IND[idx].energy);
-	}
+#ifdef _DEB_
+fprintf(stdout,"Calculation done, preparing gnuplot files\n");
+fprintf(stdout,"USING following references:\n");
+#endif
 	for(idx=0;idx<NREF;idx++){
 		prep_hull(idx);
+#ifdef _DEB_
 		fprintf(stdout,"REF[%i] [ ",idx);
 		for(jdx=0;jdx<NREF;jdx++) fprintf(stdout,"%i ",REF[idx].atoms[jdx]);
 		fprintf(stdout,"] E=%lf\n",REF[idx].energy);
+#endif
 	}
 	free_all();
 	return 0;
