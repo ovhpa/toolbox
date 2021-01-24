@@ -63,8 +63,8 @@ BOOL pictave;
 #define ELM ih.elements
 
 BOOL read_ind_param(){
+	PREP_READLINE();
 	FILE *vf;
-	size_t len = 0;
 	CHAR *line = NULL;
 	CHAR *ptr , *ptr2;
 	vf = fopen("Individuals", "rt");
@@ -104,8 +104,8 @@ BOOL read_ind_param(){
 
 BOOL read_param_sym(){
 	/*try to peek symbols from Parameters.txt*/
+	PREP_READLINE();
 	FILE *vf;
-	size_t len = 0;
 	UINT idx=0;
 	CHAR  *ptr;
 	CHAR *line = NULL;
@@ -144,8 +144,8 @@ fprintf(stdout,"\n");
 }
 
 BOOL read_individuals(){
+	PREP_READLINE();
 	FILE *vf;
-	size_t len = 0;
 	CHAR *line = NULL;
 	CHAR *ptr , *ptr2;
 	UINT num, idx, jdx;
@@ -239,8 +239,8 @@ fprintf(stdout," [line=%i]\n",num);
 }
 
 BOOL read_chem(){
+	PREP_READLINE();
 	FILE *vf;
-	size_t len = 0;
 	DOUBLE energy_ref;
 	UINT species,nspe;
 	CHAR *line=NULL;

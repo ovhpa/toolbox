@@ -23,13 +23,15 @@ In the main directory (where the `Makefile` file is).
 There is no installation target yet, just copy the files where you can execute it.
 Here are the following programs and script:
 
-
 `disp_vibr.bash`: create a xsf file with the animation of each vibration modes from a VASP calculation.
 
 `get_lvl.bash`: display some interesting level information for each k-point of a VASP calculation.
 
 `uspex_chem`: read USPEX Individuals file and plot a convex hull, using external reference in a small file, `chem.in` if available.
 
+`pdos`: read VASP DOSCAR and sum over selected atom and projected dos.
+
+To build no bash programs, just `make all` or replace all by the program name.
 
 ## Develop
 
@@ -40,7 +42,7 @@ Use `make glib` for the former and `make dglib` for the latter.
 
 ## CHANGELOG
 
-v0.0.1 initial version. almost nothing to see there.
+v0.0.2 almost initial version. Nothing to see there.
 
 
 ## TODO
